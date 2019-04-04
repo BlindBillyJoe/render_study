@@ -4,22 +4,27 @@
 #include "geometry.h"
 #include <vector>
 
-typedef std::vector<int> Veci;
+typedef std::vector<Vec2i> Veci;
 
 class Model
 {
+    std::vector<Vec3f> m_uv;
     std::vector<Vec3f> m_vertices;
     std::vector<Veci> m_faces;
 public:
     Model();
 
-    Vec3f vert(int idx) const;
+    Vec3f vert(size_t idx) const;
     std::vector<Vec3f>& vertices();
-    int nvertices() const;
+    size_t nvertices() const;
 
-    Veci face(int idx) const;
+    Veci face(size_t idx) const;
     std::vector<Veci>& faces();
-    int nfaces() const;
+    size_t nfaces() const;
+
+    Vec3f uv(size_t idx) const;
+    std::vector<Vec3f>& uvs();
+    size_t nuvs() const;
 };
 
 #endif
