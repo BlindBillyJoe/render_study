@@ -57,6 +57,10 @@ struct TGAColor {
 		}
 		return *this;
 	}
+
+	TGAColor operator *(float depth) {
+		return TGAColor(r * depth, g* depth, b * depth, 255);
+	}
 };
 
 

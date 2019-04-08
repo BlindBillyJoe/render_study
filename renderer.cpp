@@ -12,6 +12,8 @@ static int w;
 static int uvH;
 static int uvW;
 
+void line_optimized(Vec3i xxy, TGAImage* output, const TGAColor& color);
+
 Renderer::Renderer()
 {
 
@@ -42,7 +44,7 @@ void Renderer::render(Model* model, TGAImage* image, TGAImage* diffuse)
                 model->vert(static_cast<size_t>(fVec[1].first)).z +
                 model->vert(static_cast<size_t>(fVec[2].first)).z +
                 3.f) / 6.f;
-        triangle(
+        bool result = triangle(
             {
                 {
                     static_cast<int>((model->vert(static_cast<size_t>(fVec[0].first)).x + 1) * w / 2),
@@ -139,8 +141,8 @@ void Renderer::line(Vec2i start, Vec2i end, Vec2i uvStart, Vec2i uvEnd, float de
     for (int x = *sp.x; x <= *ep.x; ++x, ++xuv) {
         int &a = swaped ? y : x;
         int &b = swaped ? x : y;
-        const int &c = uvSwaped ? yuv : (int)xuv;
-        const int &d = uvSwaped ? (int)xuv : yuv;
+        const int &c = uvSwaped ? yuv : xuv;
+        const int &d = uvSwaped ? xuv : yuv;
         
         if (zBuffer) {
                 if( zBuffer[a][b] > depth)
@@ -215,42 +217,65 @@ static void sortPoints(Vec3<Vec2i>& points, string type)
         std::swap(points.first, points.third);
     if (points.second.y > points.third.y)
         std::swap(points.second, points.third);
-    printf("%i:%i %i:%i %i:%i %s\n", points.first.x, points.first.y, points.second.x, points.second.y, points.third.x, points.third.y, type.c_str());
+    // printf("%i:%i %i:%i %i:%i %s\n", points.first.x, points.first.y, points.second.x, points.second.y, points.third.x, points.third.y, type.c_str());
 }
 
-void Renderer::triangle(Vec3<Vec2i> points, Vec3<Vec2i> uv, float depth, TGAImage* image, TGAImage* diffuse)
+bool Renderer::triangle(Vec3<Vec2i> v_p, Vec3<Vec2i> uv_p, float depth, TGAImage* image, TGAImage* diffuse)
 {
-    sortPoints(points, "triangle");
-    sortPoints(uv, "uv");
-    int totalHeight = points.third.y - points.first.y;
-    int uvTotalHeight = uv.third.y - uv.first.y;
+    sortPoints(v_p, "triangle");
+    sortPoints(uv_p, "uv");
+    int totalHeight = v_p.third.y - v_p.first.y;
+    int uvTotalHeight = uv_p.third.y - uv_p.first.y;
     if(!totalHeight)
-        return;
-    int firstSegmentHeight = points.second.y - points.first.y + 1;
-    int secondSegmentHeight = points.third.y - points.second.y + 1;
+        return false;
+    int firstSegmentHeight = v_p.second.y - v_p.first.y + 1;
+    int secondSegmentHeight = v_p.third.y - v_p.second.y + 1;
+
+    float uv_diff_y = uvTotalHeight / static_cast<float>(totalHeight);
+    float uvy = uv_p.first.y;
+
     for(int i = 0; i <= totalHeight; ++i)
     {
-        bool second_segment = i > firstSegmentHeight - 1 || points.second.y == points.first.y;
+        bool second_segment = i > firstSegmentHeight - 1 || v_p.second.y == v_p.first.y;
         float alpha = static_cast<float>(i)/totalHeight;
-        float beta = static_cast<float>(i - (second_segment ? points.second.y - points.first.y : 0))/(second_segment ? secondSegmentHeight : firstSegmentHeight);
+        float beta = static_cast<float>(i - (second_segment ? v_p.second.y - v_p.first.y : 0)) /
+            (second_segment ? secondSegmentHeight : firstSegmentHeight);
         float uvAlpha = static_cast<float>(i) / uvTotalHeight;
-        float uvBeta = static_cast<float>(i - (second_segment ? uv.second.y - uv.first.y : 0))/(second_segment ? secondSegmentHeight : firstSegmentHeight);
-        Vec2i A = points.first + (points.third - points.first)*alpha;
-        Vec2i B = second_segment ?
-            points.second + (points.third - points.second)*beta :
-            points.first + (points.second - points.first)*beta;
-        Vec2i Auv = uv.first + (uv.third - uv.first) * uvAlpha;
-        Vec2i Buv = second_segment ?
-            uv.second + (uv.third - uv.second) * uvBeta :
-            uv.first + (uv.second - uv.first) * uvBeta;
-        line(
-                { A.x, points.first.y + i },
-                { B.x, points.first.y + i },
-                { Auv.x, uv.first.y + i },
-                { Buv.x, uv.first.y + i },
-                depth, image, diffuse
-            );
+        float uvBeta = static_cast<float>(i - (second_segment ? uv_p.second.y - uv_p.first.y : 0)) /
+            (second_segment ? secondSegmentHeight : firstSegmentHeight);
+        Vec3i v = {
+            v_p.first.x + (v_p.third.x - v_p.first.x) * alpha,
+            second_segment ?
+            v_p.second.x + (v_p.third.x - v_p.second.x) * beta :
+            v_p.first.x + (v_p.second.x - v_p.first.x) * beta,
+            v_p.first.y
+        };
+        Vec3i uv = {
+            uv_p.first.x + (uv_p.third.x - uv_p.first.x) * uvAlpha,
+            second_segment ?
+            uv_p.second.x + (uv_p.third.x - uv_p.second.x) * uvBeta :
+            uv_p.first.x + (uv_p.second.x - uv_p.first.x) * uvBeta,
+            uv_p.first.y
+        };
+        if (v.first > v.second)
+            std::swap(v.first, v.second);
+        if (uv.first > uv.second)
+            std::swap(uv.first, uv.second);
+        float uv_diff_x = static_cast<float>(uv.first == uv.second ? 1 : (uv.second - uv.first)) / 
+            (v.first == v.second ? 1 : (v.second - v.first));
+        float uvx = uv.first;
+        int x = v.first;
+        int y = v.third + i;
+        for (; x <= v.second; ++x, uvx += uv_diff_x) {
+            if (zBuffer[x][y] > depth)
+                continue;
+            zBuffer[x][y] = depth;
+            TGAColor col = diffuse->get(static_cast<int>(uvx), uvy);
+            image->set(x, y, diffuse->get(uvx, uvy) * depth);
+        }
+        uvy += uv_diff_y;
     }
+    return true;
 }
 
 void Renderer::triangle(Vec3<Vec2i> points, TGAImage* image, const TGAColor& color)
@@ -270,10 +295,18 @@ void Renderer::triangle(Vec3<Vec2i> points, TGAImage* image, const TGAColor& col
         Vec2i B = second_segment ?
             points.second + (points.third - points.second)*beta :
             points.first + (points.second - points.first)*beta;
-        line(
-                { A.x, points.first.y + i },
-                { B.x, points.first.y + i },
-                image, color
-            );
+        line_optimized(
+            { A.x, B.x, points.first.y + i},
+            image, color
+        );
+    }
+}
+
+void line_optimized(Vec3i xxy, TGAImage* output, const TGAColor& color)
+{
+    if(xxy.x > xxy.y)
+        std::swap(xxy.x, xxy.y);
+    for(int x = xxy.first; x <= xxy.second; ++x) {
+        output->set(x, xxy.third, color);
     }
 }
