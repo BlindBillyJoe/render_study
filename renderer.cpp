@@ -39,24 +39,22 @@ void Renderer::render(Model* model, TGAImage* image, TGAImage* diffuse)
 
     for(const Veci& fVec: model->faces())
     {
-        const float z = (
-                model->vert(static_cast<size_t>(fVec[0].first)).z +
-                model->vert(static_cast<size_t>(fVec[1].first)).z +
-                model->vert(static_cast<size_t>(fVec[2].first)).z +
-                3.f) / 6.f;
         bool result = triangle(
             {
                 {
                     static_cast<int>((model->vert(static_cast<size_t>(fVec[0].first)).x + 1) * w / 2),
-                    static_cast<int>((model->vert(static_cast<size_t>(fVec[0].first)).y + 1) * h / 2)
+                    static_cast<int>((model->vert(static_cast<size_t>(fVec[0].first)).y + 1) * h / 2),
+                    static_cast<int>((model->vert(static_cast<size_t>(fVec[0].first)).z) * 255)
                 },
                 {
                     static_cast<int>((model->vert(static_cast<size_t>(fVec[1].first)).x + 1) * w / 2),
-                    static_cast<int>((model->vert(static_cast<size_t>(fVec[1].first)).y + 1) * h / 2)
+                    static_cast<int>((model->vert(static_cast<size_t>(fVec[1].first)).y + 1) * h / 2),
+                    static_cast<int>((model->vert(static_cast<size_t>(fVec[1].first)).z) * 255)
                 },
                 {
                     static_cast<int>((model->vert(static_cast<size_t>(fVec[2].first)).x + 1) * w / 2),
-                    static_cast<int>((model->vert(static_cast<size_t>(fVec[2].first)).y + 1) * h / 2)
+                    static_cast<int>((model->vert(static_cast<size_t>(fVec[2].first)).y + 1) * h / 2),
+                    static_cast<int>((model->vert(static_cast<size_t>(fVec[2].first)).z) * 255)
                 }
             },
             {
@@ -73,7 +71,6 @@ void Renderer::render(Model* model, TGAImage* image, TGAImage* diffuse)
                     static_cast<int>((model->uv(static_cast<size_t>(fVec[2].second)).y) * uvH)
                 }
             },
-            z,
             image,
             diffuse
         );
@@ -209,6 +206,16 @@ void Renderer::line(Vec2i start, Vec2i end, TGAImage* image, const TGAColor& col
     }
 }
 
+static void sortPoints(Vec3<Vec3i>& points, string type)
+{
+    if (points.first.y > points.second.y)
+        std::swap(points.first, points.second);
+    if (points.first.y > points.third.y)
+        std::swap(points.first, points.third);
+    if (points.second.y > points.third.y)
+        std::swap(points.second, points.third);
+}
+
 static void sortPoints(Vec3<Vec2i>& points, string type)
 {
     if (points.first.y > points.second.y)
@@ -217,10 +224,23 @@ static void sortPoints(Vec3<Vec2i>& points, string type)
         std::swap(points.first, points.third);
     if (points.second.y > points.third.y)
         std::swap(points.second, points.third);
-    // printf("%i:%i %i:%i %i:%i %s\n", points.first.x, points.first.y, points.second.x, points.second.y, points.third.x, points.third.y, type.c_str());
 }
 
-bool Renderer::triangle(Vec3<Vec2i> v_p, Vec3<Vec2i> uv_p, float depth, TGAImage* image, TGAImage* diffuse)
+static int getDepth(const Vec2i& point, const Vec3<Vec3i>& triangle)
+{
+    float a11 = point.x - triangle.first.x;
+    float a12 = triangle.second.x - triangle.first.x;
+    float a13 = triangle.third.x - triangle.first.x;
+    float a21 = point.y - triangle.first.y;
+    float a22 = triangle.second.y - triangle.first.y;
+    float a23 = triangle.third.y - triangle.first.y;
+    float a32 = triangle.second.z - triangle.first.z;
+    float a33 = triangle.third.z - triangle.first.z;
+    float depth = -(a11 * a22 * a33 + a13 * a21 * a32 - a11 * a23 * a32 - a12 * a21 * a33) / (a12 * a23 - a13 * a22) + triangle.first.z;
+    return depth;
+}
+
+bool Renderer::triangle(Vec3<Vec3i> v_p, Vec3<Vec2i> uv_p, TGAImage* image, TGAImage* diffuse)
 {
     sortPoints(v_p, "triangle");
     sortPoints(uv_p, "uv");
@@ -267,11 +287,12 @@ bool Renderer::triangle(Vec3<Vec2i> v_p, Vec3<Vec2i> uv_p, float depth, TGAImage
         int x = v.first;
         int y = v.third + i;
         for (; x <= v.second; ++x, uvx += uv_diff_x) {
+            float depth = getDepth({x, y}, v_p);
             if (zBuffer[x][y] > depth)
                 continue;
             zBuffer[x][y] = depth;
             TGAColor col = diffuse->get(static_cast<int>(uvx), uvy);
-            image->set(x, y, diffuse->get(uvx, uvy) * depth);
+            image->set(x, y, diffuse->get(uvx, uvy) * (depth / 255.));
         }
         uvy += uv_diff_y;
     }
