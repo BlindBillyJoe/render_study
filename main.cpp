@@ -2,20 +2,27 @@
 #include "renderer.h"
 #include "objparser.h"
 #include "model.h"
+#include "tgadevice.h"
 
 void render()
 {
-    TGAImage image(1024, 1024, TGAImage::RGBA);
+    TgaDevice *device_triangle = new TgaDevice(768, 1024, TGAImage::RGBA);
+    TgaDevice *device_square = new TgaDevice(768, 1024, TGAImage::RGBA);
     TGAImage diffuse(1024, 1024, TGAImage::RGBA);
     diffuse.read_tga_file("c:/projects/ge/african_head_diffuse.tga");
     diffuse.flip_vertically();
     Renderer renderer;
     ObjParser parser;
     auto ptr = parser.parse("c:/projects/ge/african_head.obj");
-    renderer.render(ptr, &image, &diffuse);
-    image.flip_vertically();
-    image.write_tga_file("c:/projects/ge/result.tga");
+    renderer.render(ptr, device_triangle, &diffuse, Renderer::Rasterisation::TRIANGLE);
+    renderer.render(ptr, device_square, &diffuse, Renderer::Rasterisation::SQUARE);
+    device_triangle->flip_vertically();
+    device_triangle->write_tga_file("c:/projects/ge/result_trianlge_raster.tga");
+    device_square->flip_vertically();
+    device_square->write_tga_file("c:/projects/ge/result_square_raster.tga");
     delete ptr;
+    delete device_triangle;
+    delete device_square;
 }
 
 void testRender()
@@ -69,10 +76,35 @@ void testDiffuse()
     out.write_tga_file("c:/projects/ge/diffuse_test.tga");
 }
 
-int main()
+void testLowPolyBuildings()
 {
-    // testRender();
+    TgaDevice *device = new TgaDevice(2800, 2800, TGAImage::RGBA);
+    Renderer renderer;
+    ObjParser parser;
+    auto ptr = parser.parse("c:/projects/ge/low poly buildings.obj");
+    renderer.render(ptr, device, nullptr);
+    device->flip_vertically();
+    device->write_tga_file("c:/projects/ge/result_buildings.tga");
+    delete ptr;
+    delete device;
+}
+
+void testBugatti()
+{
+    TgaDevice *device = new TgaDevice(2800, 2800, TGAImage::RGBA);
+    Renderer renderer;
+    ObjParser parser;
+    auto ptr = parser.parse("c:/projects/ge/bugatti.obj");
+    renderer.render(ptr, device, nullptr);
+    device->flip_vertically();
+    device->write_tga_file("c:/projects/ge/result_bugatti.tga");
+    delete ptr;
+    delete device;
+}
+
+int main(int argc, char** args)
+{
+    testDiffuse();
     render();
-    // testDiffuse();
     return 0;
 }

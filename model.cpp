@@ -35,12 +35,12 @@ size_t Model::nfaces() const
     return m_faces.size();
 }
 
-Vec3f Model::uv(size_t idx) const
+Vec2f Model::uv(size_t idx) const
 {
     return m_uv[idx];
 }
 
-std::vector<Vec3f>& Model::uvs()
+std::vector<Vec2f>& Model::uvs()
 {
     return m_uv;
 }
@@ -48,4 +48,19 @@ std::vector<Vec3f>& Model::uvs()
 size_t Model::nuvs() const
 {
     return m_uv.size();
+}
+
+Triangle Model::triangle(size_t idx) const
+{
+    return m_triangles[idx];
+}
+
+std::vector<Triangle>& Model::triangles()
+{
+    return m_triangles;
+}
+
+size_t Model::ntriangles() const
+{
+    return m_triangles.size();
 }

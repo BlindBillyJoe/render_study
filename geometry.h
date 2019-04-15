@@ -1,6 +1,13 @@
 #ifndef GEOMETRY_H
 #define GEOMETRY_H
 
+#include <algorithm>
+
+inline bool is_equal(float x, float y)
+{
+    return std::fabs(x - y) < std::numeric_limits<float>::epsilon();
+}
+
 template <typename type>
 struct Vec2
 {
@@ -13,11 +20,19 @@ struct Vec2
     Vec2<type>() : x(type()), y(type()) {}
     Vec2<type>(type _x, type _y) : x(_x), y(_y) {}
 
-    Vec2<type> operator + (const Vec2<type> other) const { return {x + other.x, y + other.y }; }
-    Vec2<type> operator - (const Vec2<type> other) const { return {x - other.x, y - other.y }; }
+    template<typename T>
+    Vec2<type> operator + (const Vec2<T> other) const { return {x + other.x, y + other.y }; }
 
     template<typename T>
-    Vec2<type> operator * (T t) { return {x * t, y * t }; }
+    Vec2<type> operator - (const Vec2<T> other) const { return {x - other.x, y - other.y }; }
+
+    template<typename T>
+    Vec2<type> operator * (Vec2<T> t) const { return { x * t.x, y * t.y }; }
+
+    template<typename T>
+    Vec2<type> operator * (T t) const { return {x * t, y * t }; }
+
+    bool operator == (const Vec2<type>& vec) const { return (x == vec.x && y == vec.y); }
 };
 
 
@@ -33,6 +48,20 @@ struct Vec3
 
     Vec3<type>() : x(type()), y(type()), z(type()) {}
     Vec3<type>(type _x, type _y, type _z) : x(_x), y(_y), z(_z) {}
+
+    Vec3<type> operator + (const Vec3<type>& other) const { return {x + other.x, y + other.y, z + other.z }; }
+    Vec3<type> operator - (const Vec3<type>& other) const { return {x - other.x, y - other.y, z - other.z }; }
+    Vec3<type> operator * (const Vec3<type>& t) const { return { x * t.x, y * t.y, z * t.z }; }
+
+    template<typename T>
+    Vec3<type> operator + (T t) const { return {x + t, y + t, z + t }; }
+    template<typename T>
+    Vec3<type> operator - (T t) const { return { x - t, y - t, z - t }; }
+    template<typename T>
+    Vec3<type> operator * (const T& t) const { return {x * t, y * t, z * t }; }
+
+    bool operator == (const Vec3<float>& vec) { return (utils::is_equal(x, vec.x) && utils::is_equal(y, vec.y) && utils::is_equal(z, vec.z)); }
+    bool operator == (const Vec3<type>& vec) const { return (x == vec.x && y == vec.y && z == vec.z); }
 };
 
 typedef Vec2<float> Vec2f;
@@ -44,5 +73,25 @@ typedef Vec3<int> Vec3i;
 typedef Vec3<unsigned int> Vec3u;
 
 typedef Vec2<Vec2i> Line;
+
+struct Triangle
+{
+    union
+    {
+        struct { Vec3<Vec3f> v; };
+        struct { Vec3f first, second, third; };
+    };
+
+    Vec3<Vec2f> vt;
+
+    Triangle() : first({0, 0, 0 }), second({0, 0, 0}), third({0, 0, 0}) {}
+    Triangle(Vec3<Vec3f> v, Vec3<Vec2f> vt) : v(v), vt(vt) {}
+
+    template<typename T>
+    Triangle operator + (const Vec3<T>& vec) const { return { v + vec, vt }; }
+
+    template<typename T>
+    Triangle operator * (const Vec3<T>& vec) const { return { v * vec, vt }; }
+};
 
 #endif //GEOMETRY_H
