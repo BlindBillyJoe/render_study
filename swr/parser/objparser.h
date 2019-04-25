@@ -8,7 +8,7 @@ class ObjParser : public Parser
 public:
     ObjParser();
 
-    Model* parse(const std::string& filename) override;
+    std::unique_ptr<Model> parse(const std::string& filename) override;
 };
 
 #endif

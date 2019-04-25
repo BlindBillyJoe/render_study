@@ -1,12 +1,23 @@
 #include "renderer.h"
-#include "tgaimage.h"
-#include "model.h"
-#include "utils.h"
+#include "../render/iodevice/iodevice.h"
+#include "../model/model.h"
+#include "../utils/utils.h"
+#include "../utils/color.h"
 
 #include <algorithm>
 #include <iostream>
 
-static void line_optimized(Vec3i xxy, TGAImage* output, const TGAColor& color)
+namespace colors
+{
+    Color white = Color(255, 255, 255, 255);
+    Color black = Color(0, 0, 0, 0);
+
+    Color red = Color(255, 0, 0, 255);
+    Color green = Color(0, 255, 0, 255);
+    Color blue = Color(0, 0, 255, 255);
+}
+
+static void line_optimized(Vec3i xxy, IODevice* output, const Color& color)
 {
     if(xxy.x > xxy.y)
         std::swap(xxy.x, xxy.y);
@@ -39,12 +50,12 @@ Renderer::Renderer()
 
 }
 
-void Renderer::render(Model* model, TGAImage* image, TGAImage* diffuse, Rasterisation rasterisation)
+void Renderer::render(Model* model, IODevice* image, IODevice* diffuse)
 {
-    w = image->get_width();
-    h = image->get_height();
-    uvW = diffuse ? diffuse->get_width() : 0;
-    uvH = diffuse ? diffuse->get_height() : 0;
+    w = image->width();
+    h = image->height();
+    uvW = diffuse ? diffuse->width() : 0;
+    uvH = diffuse ? diffuse->height() : 0;
 
     if(!model)
         return;
@@ -53,12 +64,12 @@ void Renderer::render(Model* model, TGAImage* image, TGAImage* diffuse, Rasteris
     preprocess(model);
 
     for(auto tri: model->triangles()) {
-        triangle({ tri.v, tri.vt * Vec2f{uvW, uvH}  }, image, diffuse, rasterisation);
+        triangle({ tri.v, tri.vt * Vec2f{uvW, uvH}  }, image, diffuse);
     }
     deleteBuffer();
 }
 
-void Renderer::line(Vec2i start, Vec2i end, Vec2i uvStart, Vec2i uvEnd, float depth, TGAImage* image, TGAImage* diffuse)
+void Renderer::line(Vec2i start, Vec2i end, Vec2i uvStart, Vec2i uvEnd, float depth, IODevice* image, IODevice* diffuse)
 {
     Vec2<const int*> sp, ep;
     Vec2<const int*> suv, euv;
@@ -118,7 +129,7 @@ void Renderer::line(Vec2i start, Vec2i end, Vec2i uvStart, Vec2i uvEnd, float de
             if( zBuffer[a][b] > depth)
                 continue;
         }
-        TGAColor diff = diffuse->get(c, d);
+        Color diff = diffuse->get(c, d);
         image->set(a, b, diff * depth);
         err += derr;
         if (err * 2 > dx) {
@@ -132,7 +143,7 @@ void Renderer::line(Vec2i start, Vec2i end, Vec2i uvStart, Vec2i uvEnd, float de
     }
 }
 
-void Renderer::line(Vec2i start, Vec2i end, TGAImage* image, const TGAColor& color)
+void Renderer::line(Vec2i start, Vec2i end, IODevice* image, const Color& color)
 {
     Vec2<const int*> sp, ep;
     bool swaped = false, uvSwaped = false;
@@ -169,7 +180,7 @@ void Renderer::line(Vec2i start, Vec2i end, TGAImage* image, const TGAColor& col
     }
 }
 
-bool Renderer::triangle(Vec3<Vec3i> v_p, Vec3<Vec2i> uv_p, TGAImage* image, TGAImage* diffuse)
+bool Renderer::triangle(Vec3<Vec3i> v_p, Vec3<Vec2i> uv_p, IODevice* image, IODevice* diffuse)
 {
     if (v_p.first.x < 0 || v_p.first.y < 0 || v_p.second.x < 0 || v_p.second.y < 0 || v_p.third.x < 0 || v_p.third.y < 0)
         return false;
@@ -206,7 +217,7 @@ bool Renderer::triangle(Vec3<Vec3i> v_p, Vec3<Vec2i> uv_p, TGAImage* image, TGAI
             if (zBuffer[x][y] > depth)
                 continue;
             zBuffer[x][y] = depth;
-            TGAColor col = diffuse ? diffuse->get(static_cast<int>(uvx), uvy) : TGAColor(255, 255, 255, 255);
+            Color col = diffuse ? diffuse->get(static_cast<int>(uvx), uvy) : Color(255, 255, 255, 255);
             image->set(x, y, col * (depth / 255.));
         }
         uvy += uv_diff_y;
@@ -215,7 +226,7 @@ bool Renderer::triangle(Vec3<Vec3i> v_p, Vec3<Vec2i> uv_p, TGAImage* image, TGAI
     return true;
 }
 
-bool Renderer::triangle(Triangle tri, TGAImage* image, TGAImage* diffuse, Rasterisation rasterisation)
+bool Renderer::triangle(Triangle tri, IODevice* image, IODevice* diffuse)
 {
     if (tri.first.x < 0 || tri.first.y < 0 || tri.second.x < 0 || tri.second.y < 0 || tri.third.x < 0 || tri.third.y < 0)
         return false;
@@ -223,15 +234,12 @@ bool Renderer::triangle(Triangle tri, TGAImage* image, TGAImage* diffuse, Raster
     utils::sortPoints(tri.v);
     utils::sortPoints(tri.vt);
 
-    if(rasterisation == TRIANGLE)
-        triangleRasterisation(tri, image, diffuse);
-    else if (rasterisation == SQUARE)
-        squareRasterisation(tri, image, diffuse);
+    triangleRasterisation(tri, image, diffuse);
 
     return true;
 }
 
-void Renderer::triangle(Vec3<Vec2i> points, TGAImage* image, const TGAColor& color)
+void Renderer::triangle(Vec3<Vec2i> points, IODevice* image, const Color& color)
 {
     utils::sortPoints(points);
     int totalHeight = points.third.y - points.first.y;
@@ -308,6 +316,7 @@ void Renderer::preprocess(Model* model)
         vert.y = y;
         vert.z = z;
     }
+    printf("vertices ok\n");
     int found = 0;
     for(auto& t: model->triangles()) {
         t.first.x     = utils::round((t.first.x  + shift.x) * step.x);
@@ -320,17 +329,7 @@ void Renderer::preprocess(Model* model)
         t.second.z    =             ((t.second.z + shift.z) * step.z);
         t.third.z     =             ((t.third.z  + shift.z) * step.z);
     }
-
-    for(auto v: model->vertices()) {
-        for(auto t: model->triangles()) {
-            if(v == t.first || v == t.second || v == t.third) {
-                found++;
-                break;
-            }
-        }
-    }
-    printf("v found: %i\n", found);
-    printf("v all: %llu\n", model->nvertices());
+    printf("triangles ok\n");
 }
 
 void Renderer::createBuffer()
@@ -353,59 +352,7 @@ void Renderer::deleteBuffer()
     zBuffer = nullptr;
 }
 
-bool Renderer::squareRasterisation(const Triangle& tri, TGAImage* image, TGAImage* diffuse)
-{
-    int min_x = std::min(std::min(tri.first.x, tri.second.x), tri.third.x);
-    int max_x = std::max(std::max(tri.first.x, tri.second.x), tri.third.x);
-    int min_y = std::min(std::min(tri.first.y, tri.second.y), tri.third.y);
-    int max_y = std::max(std::max(tri.first.y, tri.second.y), tri.third.y);
-
-    int min_x_vt = std::min(std::min(tri.vt.first.x, tri.vt.second.x), tri.vt.third.x);
-    int max_x_vt = std::max(std::max(tri.vt.first.x, tri.vt.second.x), tri.vt.third.x);
-    int min_y_vt = std::min(std::min(tri.vt.first.y, tri.vt.second.y), tri.vt.third.y);
-    int max_y_vt = std::max(std::max(tri.vt.first.y, tri.vt.second.y), tri.vt.third.y);
-    
-    TGAColor col_sqr = TGAColor(std::rand() % 255, std::rand() % 255, std::rand() % 255, 255);
-    int diff_x = max_x - min_x;
-    int diff_y = max_y - min_y;
-
-    int diff_x_vt = max_x_vt - min_x_vt;
-    int diff_y_vt = max_y_vt - min_y_vt;
-
-    float delta_x = diff_x / diff_x_vt;
-    float delta_y = diff_y / diff_y_vt;
-
-    float i_vt = 0;
-    for (int i = 0; i <= diff_x; ++i, i_vt += delta_x) {
-        int x = min_x + i;
-        float x_vt = min_x_vt + i_vt;
-        int y = 0;
-        float j_vt = 0;
-        for(int j = 0; j <= diff_y; ++j, j_vt += delta_y) {
-            y = min_y + j;
-            float y_vt = min_y_vt + j_vt;
-            if (utils::is_inside(Vec3f{ x, y, 0. }, tri.v)) {
-                float depth = utils::getDepth({x, y}, tri.v, true);
-                // if(depth < 0)
-                        // printf("%f : %f\n", depth, depth / 255.);
-                if (zBuffer[x][y] > depth)
-                    continue;
-                zBuffer[x][y] = depth;
-                if(x == utils::round(min_x) || x == utils::round(max_x) || y == utils::round(min_y) || y == utils::round(max_y)) {
-                    image->set(x, y, col_sqr);
-                } else {
-                    // TGAColor col = TGAColor(std::rand() % 255, std::rand() % 255, std::rand() % 255, 255);
-                    // TGAColor col = TGAColor(255, 255, 255, 255);
-                    TGAColor col = diffuse->get(x_vt, y_vt);
-                    image->set(x, y, col * (depth / 255.));
-                }
-            }
-        }
-    }
-    return true;
-}
-
-bool Renderer::triangleRasterisation(const Triangle& tri, TGAImage* image, TGAImage* diffuse)
+bool Renderer::triangleRasterisation(const Triangle& tri, IODevice* image, IODevice* diffuse)
 {
     float totalHeight = tri.v.third.y - tri.v.first.y;
     float uvTotalHeight = tri.vt.third.y - tri.vt.first.y;
@@ -421,7 +368,7 @@ bool Renderer::triangleRasterisation(const Triangle& tri, TGAImage* image, TGAIm
 
     float uv_diff_y = uvTotalHeight / totalHeight;
     float j = 0;
-    TGAColor col_sqr = TGAColor(std::rand() % 255, std::rand() % 255, std::rand() % 255, 255);
+    Color col_sqr = Color(std::rand() % 255, std::rand() % 255, std::rand() % 255, 255);
     for(int i = 0; i <= totalHeight; ++i, j += uv_diff_y) {
         bool second_segment = i > firstSegmentHeight || utils::is_equal(tri.v.second.y, tri.v.first.y);
         bool uv_second_segment = j > uvFirstSegmentHeight || utils::is_equal(tri.vt.second.y, tri.vt.first.y);
@@ -455,13 +402,9 @@ bool Renderer::triangleRasterisation(const Triangle& tri, TGAImage* image, TGAIm
             if (zBuffer[x][y] > depth)
                 continue;
             zBuffer[x][y] = depth;
-            // diffuse = nullptr;
-            TGAColor col = diffuse ? diffuse->get(uvx, (int)(tri.vt.third.y + j)) : TGAColor(255, 255, 255, 255);
-            // if(x == v.first || x == v.second) {
-                // image->set(x, y, col_sqr);
-            // } else {
-                image->set(x, y, col * (depth / 255.));
-            // }
+            diffuse = nullptr;
+            auto col = diffuse ? diffuse->get(uvx, (int)(tri.vt.third.y + j)) : colors::white;
+            image->set(x, y, col * (depth / 255.));
         }
     }
     return true;

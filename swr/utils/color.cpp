@@ -6,6 +6,18 @@ Color::Color()
 
 }
 
+Color::Color(const Color& other)
+    : val(other.val)
+{
+
+}
+
+Color::Color(Color&& other)
+    : val(other.val)
+{
+
+}
+
 Color::Color(int r, int g, int b, int a)
     : r(r), g(g), b(b), a(a)
 {

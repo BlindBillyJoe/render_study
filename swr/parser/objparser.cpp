@@ -1,5 +1,5 @@
 #include "objparser.h"
-#include "utils.h"
+#include "../utils/utils.h"
 
 #include <fstream>
 #include <sstream>
@@ -73,7 +73,7 @@ ObjParser::ObjParser()
 
 }
 
-Model* ObjParser::parse(const std::string& filename)
+std::unique_ptr<Model> ObjParser::parse(const std::string& filename)
 {
     ifstream in;
     in.open(filename, ifstream::in);
@@ -83,7 +83,7 @@ Model* ObjParser::parse(const std::string& filename)
 
     std::regex re("(\\d+)\\/(\\d+)?\\/?(\\d+)?", std::regex_constants::ECMAScript | std::regex_constants::icase);
 
-    Model* model = new Model();
+    auto model = std::unique_ptr<Model>(new Model());
     string line;
     vector<Vec3f>& vertices = model->vertices();
     vector<Vec2f>& uvs = model->uvs();

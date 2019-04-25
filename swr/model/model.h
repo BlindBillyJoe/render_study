@@ -1,7 +1,7 @@
 #ifndef MODEL_H
 #define MODEL_H
 
-#include "geometry.h"
+#include "../utils/geometry.h"
 #include <vector>
 #include <stddef.h>
 

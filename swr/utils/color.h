@@ -10,6 +10,8 @@ struct Color
     };
 
     Color();
+    Color(const Color& other);
+    Color(Color&& other);
     Color(int r, int g, int b, int a);
     Color(int val);
 

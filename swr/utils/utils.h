@@ -2,7 +2,7 @@
 #define UTILS_H
 
 #include "geometry.h"
-#include "model.h"
+#include "../model/model.h"
 #include <algorithm>
 #include <cstdio>
 
@@ -12,10 +12,19 @@ inline void _sortPoints(T& points)
 {
     if (points.first.y > points.second.y)
         std::swap(points.first, points.second);
+    else if (points.first.y == points.second.y)
+        if(points.first.x > points.second.x)
+            std::swap(points.first, points.second);
     if (points.first.y > points.third.y)
         std::swap(points.first, points.third);
+    else if (points.first.y == points.third.y)
+        if(points.first.x > points.third.x)
+            std::swap(points.first, points.third);
     if (points.second.y > points.third.y)
         std::swap(points.second, points.third);
+    else if (points.second.y == points.third.y)
+        if(points.second.x > points.third.x)
+            std::swap(points.second, points.third);
 }
 
 template<typename T>
@@ -164,6 +173,7 @@ inline void squareRasterTest(Triangle* ptr)
     printf(is_inside(ptr->second, ptr->v ) ? "inside " : "not inside\n");
     printf(is_inside(ptr->third, ptr->v ) ? "inside " : "not inside\n");
 }
+
 inline bool is_inside(Vec3f p, Vec3<Vec3f> t)
 {
     auto f = [](Vec3f a, Vec3f b, Vec3f p) -> float {
@@ -178,9 +188,22 @@ inline bool is_inside(Vec3f p, Vec3<Vec3f> t)
     auto b = f(t.first, t.third, p)  * f(t.first, t.third, t.second);
     auto c = f(t.second, t.third, p) * f(t.second, t.third, t.first);
     // return a > 0 && b > 0 && c > 0;
-    return ((a > 0 || utils::is_equal(a, 0)) && (b > 0 || utils::is_equal(b, 0)) && (c > 0 || utils::is_equal(c, 0))) ||
-            ((a < 0 || utils::is_equal(a, 0)) && (b < 0 || utils::is_equal(b, 0)) && (c < 0 || utils::is_equal(c, 0)));
+    return ((a > 0 || utils::is_equal(a, 0)) && (b > 0 || utils::is_equal(b, 0)) && (c > 0 || utils::is_equal(c, 0)))
+            ;
+            // || ((a < 0 || utils::is_equal(a, 0)) && (b < 0 || utils::is_equal(b, 0)) && (c < 0 || utils::is_equal(c, 0)));
 }
+
+// inline bool is_inside(Vec2i p, Vec3<Vec2i> t)
+// {
+//     return is_inside( 
+//         {p.x, p.y, 0},
+//         {
+//             { t.x.x, t.x.y, 0 },
+//             { t.y.x, t.y.y, 0 },
+//             { t.z.x, t.z.y, 0 }
+//         });
+// }
+
 }
 
 #endif //UTILSH
