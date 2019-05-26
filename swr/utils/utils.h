@@ -64,7 +64,7 @@ inline void sortPoints(Vec3<Vec2f>& points)
 template<>
 inline void sortPoints(Triangle& points)
 {
-    _sortPoints(points);
+    _sortPoints(points.v);
     // printf("%f:%f %f:%f %f:%f\n", points.first.x, points.first.y, points.second.x, points.second.y, points.third.x, points.third.y);
 }
 
@@ -104,7 +104,7 @@ inline float _getDepth(const Vec2i& point, const Vec3<Vec3<T> >& triangle, bool 
 template<typename T>
 inline float getDepth(const Vec2i& point, const Vec3<Vec3<T> >& triangle, bool interpolate)
 {
-    retun _getDepth(point, triangle, interpolate);
+    return _getDepth(point, triangle, interpolate);
 }
 
 template<>
@@ -157,23 +157,6 @@ inline int length(const Vec3f& v1, const Vec3f& v2)
     return std::sqrt(std::pow(v1.x - v2.x, 2) + std::pow(v1.y - v2.y, 2) + std::pow(v1.z - v2.z, 2));
 }
 
-inline void squareRasterTest(Triangle* ptr)
-{
-    auto f = [](Vec3f a, Vec3f b, Vec3f p) -> float {
-        return (p.x - a.x) * (b.y - a.y) - (p.y - a.y)*(b.x - a.x);
-    };
-    auto is_inside = [=](Vec3f p, Vec3<Vec3f> t) -> bool {
-        return f(t.first, t.second, p) * f(t.first, t.second, t.third) >= 0 &&
-               f(t.first, t.third, p) * f(t.first, t.third, t.second) >= 0 &&
-               f(t.second, t.third, p) * f(t.second, t.third, t.first) >= 0;
-    };
-
-
-    printf(is_inside(ptr->first, ptr->v ) ? "inside " : "not inside\n");
-    printf(is_inside(ptr->second, ptr->v ) ? "inside " : "not inside\n");
-    printf(is_inside(ptr->third, ptr->v ) ? "inside " : "not inside\n");
-}
-
 inline bool is_inside(Vec3f p, Vec3<Vec3f> t)
 {
     auto f = [](Vec3f a, Vec3f b, Vec3f p) -> float {
@@ -192,17 +175,6 @@ inline bool is_inside(Vec3f p, Vec3<Vec3f> t)
             ;
             // || ((a < 0 || utils::is_equal(a, 0)) && (b < 0 || utils::is_equal(b, 0)) && (c < 0 || utils::is_equal(c, 0)));
 }
-
-// inline bool is_inside(Vec2i p, Vec3<Vec2i> t)
-// {
-//     return is_inside( 
-//         {p.x, p.y, 0},
-//         {
-//             { t.x.x, t.x.y, 0 },
-//             { t.y.x, t.y.y, 0 },
-//             { t.z.x, t.z.y, 0 }
-//         });
-// }
 
 }
 

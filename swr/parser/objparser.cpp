@@ -47,7 +47,7 @@ std::vector<Triangle> triangulate(const Veci& fVec, const vector<Vec3f>& vertice
 
         result.push_back(tri);
 
-        tri.third = buff[1].first;
+        tri.v.third = buff[1].first;
         tri.vt.third = buff[1].second;
         result.push_back(tri);
     } else {

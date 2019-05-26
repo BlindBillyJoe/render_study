@@ -2,6 +2,7 @@
 #define GEOMETRY_H
 
 #include <algorithm>
+#include <cmath>
 
 inline bool is_equal(float x, float y)
 {
@@ -60,7 +61,7 @@ struct Vec3
     template<typename T>
     Vec3<type> operator * (const T& t) const { return {x * t, y * t, z * t }; }
 
-    bool operator == (const Vec3<float>& vec) { return (utils::is_equal(x, vec.x) && utils::is_equal(y, vec.y) && utils::is_equal(z, vec.z)); }
+    bool operator == (const Vec3<float>& vec) { return (is_equal(x, vec.x) && is_equal(y, vec.y) && is_equal(z, vec.z)); }
     bool operator == (const Vec3<type>& vec) const { return (x == vec.x && y == vec.y && z == vec.z); }
 };
 
@@ -76,15 +77,9 @@ typedef Vec2<Vec2i> Line;
 
 struct Triangle
 {
-    union
-    {
-        struct { Vec3<Vec3f> v; };
-        struct { Vec3f first, second, third; };
-    };
-
+    Vec3<Vec3f> v;
     Vec3<Vec2f> vt;
 
-    Triangle() : first({0, 0, 0 }), second({0, 0, 0}), third({0, 0, 0}) {}
     Triangle(Vec3<Vec3f> v, Vec3<Vec2f> vt) : v(v), vt(vt) {}
 
     template<typename T>
