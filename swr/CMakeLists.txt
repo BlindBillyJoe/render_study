@@ -6,6 +6,7 @@ SET(SWR_LIB
     model/model.cpp
     parser/parser.cpp
     parser/objparser.cpp
+    render/renderer.cpp
     render/iodevice/tgaimage.cpp
     render/iodevice/tgadevice.cpp
     utils/color.cpp

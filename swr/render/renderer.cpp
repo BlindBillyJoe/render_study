@@ -62,10 +62,11 @@ void Renderer::render(Model* model, IODevice* image, IODevice* diffuse)
 
     createBuffer();
     preprocess(model);
-
+    printf("render start\n");
     for(auto tri: model->triangles()) {
         triangle({ tri.v, tri.vt * Vec2f{uvW, uvH}  }, image, diffuse);
     }
+    printf("render end\n");
     deleteBuffer();
 }
 
@@ -228,7 +229,7 @@ bool Renderer::triangle(Vec3<Vec3i> v_p, Vec3<Vec2i> uv_p, IODevice* image, IODe
 
 bool Renderer::triangle(Triangle tri, IODevice* image, IODevice* diffuse)
 {
-    if (tri.first.x < 0 || tri.first.y < 0 || tri.second.x < 0 || tri.second.y < 0 || tri.third.x < 0 || tri.third.y < 0)
+    if (tri.v.first.x < 0 || tri.v.first.y < 0 || tri.v.second.x < 0 || tri.v.second.y < 0 || tri.v.third.x < 0 || tri.v.third.y < 0)
         return false;
 
     utils::sortPoints(tri.v);
@@ -319,15 +320,15 @@ void Renderer::preprocess(Model* model)
     printf("vertices ok\n");
     int found = 0;
     for(auto& t: model->triangles()) {
-        t.first.x     = utils::round((t.first.x  + shift.x) * step.x);
-        t.second.x    = utils::round((t.second.x + shift.x) * step.x);
-        t.third.x     = utils::round((t.third.x  + shift.x) * step.x);
-        t.first.y     = utils::round((t.first.y  + shift.y) * step.y);
-        t.second.y    = utils::round((t.second.y + shift.y) * step.y);
-        t.third.y     = utils::round((t.third.y  + shift.y) * step.y);
-        t.first.z     =             ((t.first.z  + shift.z) * step.z);
-        t.second.z    =             ((t.second.z + shift.z) * step.z);
-        t.third.z     =             ((t.third.z  + shift.z) * step.z);
+        t.v.first.x     = utils::round((t.v.first.x  + shift.x) * step.x);
+        t.v.second.x    = utils::round((t.v.second.x + shift.x) * step.x);
+        t.v.third.x     = utils::round((t.v.third.x  + shift.x) * step.x);
+        t.v.first.y     = utils::round((t.v.first.y  + shift.y) * step.y);
+        t.v.second.y    = utils::round((t.v.second.y + shift.y) * step.y);
+        t.v.third.y     = utils::round((t.v.third.y  + shift.y) * step.y);
+        t.v.first.z     =             ((t.v.first.z  + shift.z) * step.z);
+        t.v.second.z    =             ((t.v.second.z + shift.z) * step.z);
+        t.v.third.z     =             ((t.v.third.z  + shift.z) * step.z);
     }
     printf("triangles ok\n");
 }
